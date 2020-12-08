@@ -19,7 +19,7 @@ if(!defined("IN_MYBB"))
 	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
-define('EP_PLUGIN_VER', '0.1.1');
+define('EP_PLUGIN_VER', '0.1.2');
 defined('PLUGINLIBRARY') or define('PLUGINLIBRARY', MYBB_ROOT . 'inc/plugins/pluginlibrary.php');
 define('EP_PLUGIN_PATH', __DIR__ . '/extra_poll');
 
@@ -281,6 +281,12 @@ function load_ep (&$pid, &$tid) {
 	$forumpermissions = forum_permissions($thread['fid']);
 	$fid = $thread['fid'];
 	$mybb->post_code = generate_post_check();
+
+	// Does the thread belong to a valid forum?
+	$forum = get_forum($fid);
+	if(!$forum || $forum['type'] != "f") {
+		xmlhttp_error();
+	}
 
 	$lang->load("showthread");
 
