@@ -14,5 +14,4 @@
  */
 
 $l['extrapoll_add_poll_to_thread'] = 'Add Extra Poll to this thread';
-$l['extrapoll_extrapoll'] = 'Extra Poll';
 ?>

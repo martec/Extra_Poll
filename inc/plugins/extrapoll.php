@@ -19,7 +19,7 @@ if(!defined("IN_MYBB"))
 	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
-define('EP_PLUGIN_VER', '0.1.3');
+define('EP_PLUGIN_VER', '0.2.0');
 defined('PLUGINLIBRARY') or define('PLUGINLIBRARY', MYBB_ROOT . 'inc/plugins/pluginlibrary.php');
 define('EP_PLUGIN_PATH', __DIR__ . '/extra_poll');
 
@@ -56,6 +56,11 @@ EOF;
 function extrapoll_install()
 {
 	global $db, $lang, $mybb;
+
+	if(!$db->field_exists('expoll', 'threads'))
+	{
+		$db->query("ALTER TABLE ".TABLE_PREFIX."threads ADD `expoll` text NOT NULL");
+	}
 
 	if(!$db->table_exists("polls2")) {
 		$db->query("CREATE TABLE ".TABLE_PREFIX."polls2 (
@@ -110,6 +115,10 @@ function extrapoll_uninstall()
 
     $PL or require_once PLUGINLIBRARY;
 
+	if($db->field_exists('expoll', 'threads')) {
+		$db->query("ALTER TABLE ".TABLE_PREFIX."threads DROP column `expoll`");
+	}
+
 	if($db->table_exists("polls2")) {
 		$db->drop_table("polls2");
 	}
@@ -119,13 +128,6 @@ function extrapoll_uninstall()
 
 	$PL->templates_delete('expolls');
 
-	//remove data in cache
-	if(is_object($cache->handler)) {
-		$cache->handler->delete('expoll');
-	}
-
-	// There is always a copy in the database.
-	$db->delete_query("datacache", "title='expoll'");
 }
 
 function extrapoll_activate()
@@ -162,26 +164,12 @@ function extrapoll_activate()
 
 	include_once MYBB_ROOT.'inc/adminfunctions_templates.php';
 
-	find_replace_templatesets("showthread_poll", "#^(.*)$#si", '<span id="default_poll">$1</span>');
-	find_replace_templatesets("showthread_poll_results", "#^(.*)$#si", '<span id="default_poll">$1</span>');
-
-	find_replace_templatesets(
-		'showthread',
-		'#' . preg_quote('{$headerinclude}') . '#i',
-		'{$headerinclude}{$expoll_header}'
-	);
-
 	find_replace_templatesets(
 		'showthread',
 		'#' . preg_quote('{$addpoll}') . '#i',
 		'{$addpoll}{$addexpoll}'
 	);
 
-	find_replace_templatesets(
-		'showthread',
-		'#' . preg_quote('<a href="javascript:void(0)" id="thread_modes">') . '#i',
-		'{$ep_pop}<a href="javascript:void(0)" id="thread_modes">'
-	);
 }
 
 function extrapoll_deactivate()
@@ -192,28 +180,10 @@ function extrapoll_deactivate()
 
 	find_replace_templatesets(
 		'showthread',
-		'#' . preg_quote('{$headerinclude}{$expoll_header}') . '#i',
-		'{$headerinclude}'
-	);
-
-	find_replace_templatesets(
-		'showthread',
 		'#' . preg_quote('{$addpoll}{$addexpoll}') . '#i',
 		'{$addpoll}'
 	);
 
-	find_replace_templatesets(
-		'showthread',
-		'#' . preg_quote('{$ep_pop}<a href="javascript:void(0)" id="thread_modes">') . '#i',
-		'<a href="javascript:void(0)" id="thread_modes">'
-	);
-
-	$search = array(
-		"#^".preg_quote('<span id="default_poll">')."#si",
-		"#".preg_quote('</span>')."$#si"
-	);
-	find_replace_templatesets("showthread_poll", $search, "", 0);
-	find_replace_templatesets("showthread_poll_results", $search, "", 0);
 }
 
 $plugins->add_hook('global_start', 'ep_cache');
@@ -228,32 +198,30 @@ function ep_cache()
 	$templatelist .= ',';
 
  	if (THIS_SCRIPT == 'showthread.php') {
-		$templatelist .= 'expolls_poll,expolls_poll_editpoll,expolls_poll_option,expolls_poll_option_multiple,expolls_poll_resultbit,expolls_poll_results,expolls_poll_undovote,expolls_pop_but,expolls_header,expolls_add_poll';
+		$templatelist .= 'expolls_poll,expolls_poll_editpoll,expolls_poll_option,expolls_poll_option_multiple,expolls_poll_resultbit,expolls_poll_results,expolls_poll_undovote,expolls_add_poll';
 	}
 }
 
 $plugins->add_hook('showthread_end', 'ep_showthread_poll');
 function ep_showthread_poll()
 {
-	global $thread, $poll, $forumpermissions, $forum, $fid, $mybb, $templates, $lang, $tid, $addexpoll, $cache, $expoll_header, $ep_pop;
+	global $thread, $poll, $forumpermissions, $forum, $fid, $mybb, $templates, $lang, $tid, $addexpoll, $cache, $expoll_header, $ep_pop, $pollbox;
 
 	if (!$lang->extrapoll) {
 		$lang->load('extrapoll');
 	}
 
 	$addexpoll = $ep_pid = $ep_js = '';
-	if ($thread['poll']) {
-		//Read from cache the respective extra polls of the actual thread id.
-		$epcache = $cache->read('expoll');
-		if (!empty($epcache)) {
-			if ($epcache[$tid]) {
-				$ep_pid = json_encode($epcache[$tid]);
-				$ep_js = "<script type=\"text/javascript\" src=\"".$mybb->asset_url."/jscripts/extra_poll.js?ver=".EP_PLUGIN_VER."\"></script>";
-				eval("\$expoll_header = \"".$templates->get("expolls_header")."\";");
-				eval("\$ep_pop = \"".$templates->get("expolls_pop_but")."\";");
-			}
-		}
+	$ex_poll = my_unserialize($thread['expoll']);
 
+	if ($ex_poll) {
+		//create extra poll in showthread
+		foreach($ex_poll as $ex_poll_pid => $ex_poll_tid) {
+			$pollbox .= load_ep($ex_poll_pid, $ex_poll_tid);
+		}
+	}
+
+	if ($thread['poll']) {
 		// Display 'add extra poll' link to thread creator (or mods)
 		$ismod = false;
 		if (is_moderator($fid)) {
@@ -470,51 +438,6 @@ function load_ep (&$pid, &$tid) {
 	return $pollbox;
 }
 
-$plugins->add_hook('xmlhttp', 'ajax_ep_get');
-function ajax_ep_get()
-{
-	global $mybb, $lang, $parser, $db;
-
-	if (!$lang->global) {
-		$lang->load("global");
-	}
-	if (!$lang->polls) {
-		$lang->load("polls");
-	}
-
-	if (!is_object($parser))
-	{
-		require_once MYBB_ROOT.'inc/class_parser.php';
-		$parser = new postParser;
-	}
-
-	if ($mybb->input['action'] != "ajax_ep_get" || $mybb->request_method != "get"){return false;exit;}
-
-	if (!verify_post_check($mybb->input['my_post_key'], true))
-	{
-		xmlhttp_error($lang->invalid_post_code);
-	}
-	$tid = 0;
-	if($mybb->input['pid']) {
-		$pid = $mybb->input['pid'];
-		$query = $db->simple_select("polls2", "pid,tid", "pid='$pid'");
-		$poll = $db->fetch_array($query);
-		if(!$poll)
-		{
-			xmlhttp_error($lang->error_invalidpoll, $lang->error);
-		}
-		$tid = $poll['tid'];
-	}
-	else {
-		xmlhttp_error($lang->error_invalidpoll);
-	}
-
-	$pollbox = load_ep($mybb->input['pid'], $tid);
-
-	print $pollbox;
-	die();
-}
-
 /**
  * Completely rebuild extra poll counters for a particular poll (useful if they become out of sync)
  *
@@ -604,20 +527,6 @@ function acp_rebuild_extra_poll_counters()
 			while($poll = $db->fetch_array($query))
 			{
 				rebuild_extra_poll_counters($poll['pid']);
-			}
-
-			//check finished before update cache
-			if($end >= $num_polls)
-			{
-				$ep_caches = array();
-
-				$query = $db->simple_select('polls2', 'pid, tid, question');
-				while($ep_cache = $db->fetch_array($query))
-				{
-					$ep_caches[$ep_cache['tid']][$ep_cache['pid']] = $ep_cache['question'];
-				}
-
-				$cache->update("expoll", $ep_caches);
 			}
 
 			check_proceed($num_polls, $end, ++$page, $per_page, "expollcounters", "do_rebuildexpollcounters", $lang->success_rebuilt_poll_counters);

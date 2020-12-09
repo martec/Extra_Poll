@@ -106,15 +106,17 @@ switch($mybb->input['action'])
 
 		ep_delete_poll($poll['pid']);
 
-		$ep_caches = array();
+		$ep_arrays = array();
 
-		$query = $db->simple_select('polls2', 'pid, tid, question');
-		while($ep_cache = $db->fetch_array($query))
+		$query = $db->simple_select('polls2', 'pid, tid', "tid='".$thread['tid']."'");
+		while($ep_array = $db->fetch_array($query))
 		{
-			$ep_caches[$ep_cache['tid']][$ep_cache['pid']] = $ep_cache['question'];
+			$ep_arrays[$ep_array['pid']] = $ep_array['tid'];
 		}
 
-		$cache->update("expoll", $ep_caches);
+		$dbep_arrays = $db->escape_string(my_serialize($ep_arrays));
+
+		$db->update_query("threads", array('expoll' => $dbep_arrays), "tid='".$thread['tid']."'");
 
 		moderation_redirect(get_thread_link($tid), $lang->redirect_polldeleted);
 		break;

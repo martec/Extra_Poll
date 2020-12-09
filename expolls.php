@@ -327,17 +327,19 @@ if($mybb->input['action'] == "do_newpoll" && $mybb->request_method == "post")
 
 	$pid = $db->insert_query("polls2", $newpoll);
 
-	$plugins->run_hooks("expolls_do_newpoll_end");
+	$ep_arrays = array();
 
-	$ep_caches = array();
-
-	$query = $db->simple_select('polls2', 'pid, tid, question');
-	while($ep_cache = $db->fetch_array($query))
+	$query = $db->simple_select('polls2', 'pid, tid', "tid='".$thread['tid']."'");
+	while($ep_array = $db->fetch_array($query))
 	{
-		$ep_caches[$ep_cache['tid']][$ep_cache['pid']] = $ep_cache['question'];
+		$ep_arrays[$ep_array['pid']] = $ep_array['tid'];
 	}
 
-	$cache->update("expoll", $ep_caches);
+	$dbep_arrays = $db->escape_string(my_serialize($ep_arrays));
+
+	$db->update_query("threads", array('expoll' => $dbep_arrays), "tid='".$thread['tid']."'");
+
+	$plugins->run_hooks("expolls_do_newpoll_end");
 
 	if($thread['visible'] == 1)
 	{
@@ -365,9 +367,11 @@ if($mybb->input['action'] == "editpoll")
 
 	$ep_tid = $poll['tid'];
 
-	$query = $db->simple_select("threads", "*", "tid='$ep_tid' AND poll!=0");
+	$query = $db->simple_select("threads", "*", "tid='$ep_tid'");
 	$thread = $db->fetch_array($query);
-	if(!$thread)
+	$ex_poll = my_unserialize($thread['expoll']);
+
+	if($ex_poll[$pid] !== $poll['tid'])
 	{
 		error($lang->error_invalidthread);
 	}
@@ -570,9 +574,11 @@ if($mybb->input['action'] == "do_editpoll" && $mybb->request_method == "post")
 
 	$ep_tid = $poll['tid'];
 
-	$query = $db->simple_select("threads", "*", "tid='$ep_tid' AND poll!=0");
+	$query = $db->simple_select("threads", "*", "tid='$ep_tid'");
 	$thread = $db->fetch_array($query);
-	if(!$thread)
+	$ex_poll = my_unserialize($thread['expoll']);
+
+	if($ex_poll[$pid] !== $poll['tid'])
 	{
 		error($lang->error_invalidthread);
 	}
@@ -731,22 +737,24 @@ if($mybb->input['action'] == "do_editpoll" && $mybb->request_method == "post")
 	$plugins->run_hooks("expolls_do_editpoll_process");
 
 	$db->update_query("polls2", $updatedpoll, "pid='".$mybb->get_input('pid', MyBB::INPUT_INT)."'");
+	
+	$ep_arrays = array();
+
+	$query = $db->simple_select('polls2', 'pid, tid', "tid='".$thread['tid']."'");
+	while($ep_array = $db->fetch_array($query))
+	{
+		$ep_arrays[$ep_array['pid']] = $ep_array['tid'];
+	}
+
+	$dbep_arrays = $db->escape_string(my_serialize($ep_arrays));
+
+	$db->update_query("threads", array('expoll' => $dbep_arrays), "tid='".$thread['tid']."'");
 
 	$plugins->run_hooks("expolls_do_editpoll_end");
 
 	$modlogdata['fid'] = $thread['fid'];
 	$modlogdata['tid'] = $thread['tid'];
 	log_moderator_action($modlogdata, $lang->poll_edited);
-
-	$ep_caches = array();
-
-	$query = $db->simple_select('polls2', 'pid, tid, question');
-	while($ep_cache = $db->fetch_array($query))
-	{
-		$ep_caches[$ep_cache['tid']][$ep_cache['pid']] = $ep_cache['question'];
-	}
-
-	$cache->update("expoll", $ep_caches);
 
 	redirect(get_thread_link($thread['tid']), $lang->redirect_pollupdated);
 }

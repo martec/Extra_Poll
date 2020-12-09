@@ -14,6 +14,5 @@
  */
 
 $l['extrapoll_plug_desc'] = 'Extra Poll';
-$l['extrapoll_sett_desc'] = 'Settings related to the Extra Poll.';
 $l['extrapoll_rebuild_poll_counters'] = "Rebuild Extra Poll Counters";
 ?>
