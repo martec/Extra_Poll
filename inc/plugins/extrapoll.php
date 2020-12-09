@@ -19,7 +19,7 @@ if(!defined("IN_MYBB"))
 	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
-define('EP_PLUGIN_VER', '0.1.2');
+define('EP_PLUGIN_VER', '0.1.3');
 defined('PLUGINLIBRARY') or define('PLUGINLIBRARY', MYBB_ROOT . 'inc/plugins/pluginlibrary.php');
 define('EP_PLUGIN_PATH', __DIR__ . '/extra_poll');
 
@@ -270,7 +270,7 @@ function ep_showthread_poll()
 
 function load_ep (&$pid, &$tid) {
 
-	global $db, $mybb, $templates, $lang, $parser, $plugins, $pollbox, $theme;
+	global $db, $mybb, $templates, $lang, $parser, $plugins, $theme;
 
 	if ($tid == 0) {
 		xmlhttp_error();
@@ -466,12 +466,14 @@ function load_ep (&$pid, &$tid) {
 		eval("\$pollbox = \"".$templates->get("expolls_poll")."\";");
 		$plugins->run_hooks("expolls_poll");
 	}
+
+	return $pollbox;
 }
 
 $plugins->add_hook('xmlhttp', 'ajax_ep_get');
 function ajax_ep_get()
 {
-	global $mybb, $lang, $parser, $db, $pollbox;
+	global $mybb, $lang, $parser, $db;
 
 	if (!$lang->global) {
 		$lang->load("global");
@@ -507,9 +509,10 @@ function ajax_ep_get()
 		xmlhttp_error($lang->error_invalidpoll);
 	}
 
-	load_ep($mybb->input['pid'], $tid);
+	$pollbox = load_ep($mybb->input['pid'], $tid);
 
-	echo $pollbox;
+	print $pollbox;
+	die();
 }
 
 /**
@@ -603,15 +606,19 @@ function acp_rebuild_extra_poll_counters()
 				rebuild_extra_poll_counters($poll['pid']);
 			}
 
-			$ep_caches = array();
-
-			$query = $db->simple_select('polls2', 'pid, tid, question');
-			while($ep_cache = $db->fetch_array($query))
+			//check finished before update cache
+			if($end >= $num_polls)
 			{
-				$ep_caches[$ep_cache['tid']][$ep_cache['pid']] = $ep_cache['question'];
-			}
+				$ep_caches = array();
 
-			$cache->update("expoll", $ep_caches);
+				$query = $db->simple_select('polls2', 'pid, tid, question');
+				while($ep_cache = $db->fetch_array($query))
+				{
+					$ep_caches[$ep_cache['tid']][$ep_cache['pid']] = $ep_cache['question'];
+				}
+
+				$cache->update("expoll", $ep_caches);
+			}
 
 			check_proceed($num_polls, $end, ++$page, $per_page, "expollcounters", "do_rebuildexpollcounters", $lang->success_rebuilt_poll_counters);
 		}
