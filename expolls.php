@@ -371,7 +371,7 @@ if($mybb->input['action'] == "editpoll")
 	$thread = $db->fetch_array($query);
 	$ex_poll = my_unserialize($thread['expoll']);
 
-	if($ex_poll[$pid] !== $poll['tid'])
+	if($ex_poll[$poll['pid']] !== $poll['tid'])
 	{
 		error($lang->error_invalidthread);
 	}
@@ -578,7 +578,7 @@ if($mybb->input['action'] == "do_editpoll" && $mybb->request_method == "post")
 	$thread = $db->fetch_array($query);
 	$ex_poll = my_unserialize($thread['expoll']);
 
-	if($ex_poll[$pid] !== $poll['tid'])
+	if($ex_poll[$poll['pid']] !== $poll['tid'])
 	{
 		error($lang->error_invalidthread);
 	}
