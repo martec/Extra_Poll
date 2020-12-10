@@ -495,7 +495,7 @@ function acp_rebuild_extra_poll_counters()
 {
 	global $db, $mybb, $cache, $lang;
 
-	if (!isset(!$lang->tools_recount_rebuild)) {
+	if (!isset($lang->tools_recount_rebuild)) {
 		$lang->load("tools_recount_rebuild");
 	}
 
