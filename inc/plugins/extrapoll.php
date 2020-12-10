@@ -19,7 +19,7 @@ if(!defined("IN_MYBB"))
 	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
-define('EP_PLUGIN_VER', '0.2.1');
+define('EP_PLUGIN_VER', '0.2.2');
 defined('PLUGINLIBRARY') or define('PLUGINLIBRARY', MYBB_ROOT . 'inc/plugins/pluginlibrary.php');
 define('EP_PLUGIN_PATH', __DIR__ . '/extra_poll');
 
@@ -207,7 +207,7 @@ function ep_showthread_poll()
 {
 	global $thread, $poll, $forumpermissions, $forum, $fid, $mybb, $templates, $lang, $tid, $addexpoll, $cache, $expoll_header, $ep_pop, $pollbox;
 
-	if (!$lang->extrapoll) {
+	if (!isset($lang->extrapoll)) {
 		$lang->load('extrapoll');
 	}
 
@@ -256,7 +256,13 @@ function load_ep (&$pid, &$tid) {
 		xmlhttp_error();
 	}
 
-	$lang->load("showthread");
+	if (!isset($lang->showthread)) {
+		$lang->load("showthread");
+	}
+
+	if (!isset($lang->extrapoll)) {
+		$lang->load('extrapoll');
+	}
 
 	$options = array(
 		"limit" => 1
@@ -413,7 +419,7 @@ function load_ep (&$pid, &$tid) {
 			$pollstatus = $lang->poll_closed;
 		}
 
-		$lang->total_votes = $lang->sprintf($lang->total_votes, $totalvotes);
+		$lang->total_votes = $lang->sprintf($lang->extrapoll_total_votes, $totalvotes);
 		eval("\$pollbox = \"".$templates->get("expolls_poll_results")."\";");
 		$plugins->run_hooks("expolls_poll_results");
 	}
