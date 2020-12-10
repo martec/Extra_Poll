@@ -205,13 +205,13 @@ function ep_cache()
 $plugins->add_hook('showthread_end', 'ep_showthread_poll');
 function ep_showthread_poll()
 {
-	global $thread, $poll, $forumpermissions, $forum, $fid, $mybb, $templates, $lang, $tid, $addexpoll, $cache, $expoll_header, $ep_pop, $pollbox;
+	global $thread, $poll, $forumpermissions, $forum, $fid, $mybb, $templates, $lang, $tid, $addexpoll, $cache, $pollbox;
 
 	if (!isset($lang->extrapoll)) {
 		$lang->load('extrapoll');
 	}
 
-	$addexpoll = $ep_pid = $ep_js = '';
+	$addexpoll = '';
 	$ex_poll = my_unserialize($thread['expoll']);
 
 	if ($ex_poll) {
@@ -495,7 +495,7 @@ function acp_rebuild_extra_poll_counters()
 {
 	global $db, $mybb, $cache, $lang;
 
-	if (!$lang->tools_recount_rebuild) {
+	if (!isset(!$lang->tools_recount_rebuild)) {
 		$lang->load("tools_recount_rebuild");
 	}
 
@@ -545,10 +545,10 @@ function acp_rebuild_extra_poll_counters_form() {
 
 	global $lang, $form_container, $form;
 
-	if (!$lang->tools_recount_rebuild) {
+	if (!isset($lang->tools_recount_rebuild)) {
 		$lang->load("tools_recount_rebuild");
 	}
-	if (!$lang->config_extrapoll) {
+	if (!isset($lang->config_extrapoll)) {
 		$lang->load("config_extrapoll");
 	}
 
