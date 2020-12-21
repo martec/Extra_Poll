@@ -19,7 +19,7 @@ if(!defined("IN_MYBB"))
 	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
 }
 
-define('EP_PLUGIN_VER', '0.2.3');
+define('EP_PLUGIN_VER', '0.2.4');
 defined('PLUGINLIBRARY') or define('PLUGINLIBRARY', MYBB_ROOT . 'inc/plugins/pluginlibrary.php');
 define('EP_PLUGIN_PATH', __DIR__ . '/extra_poll');
 

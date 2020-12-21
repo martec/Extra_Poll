@@ -564,7 +564,8 @@ if($mybb->input['action'] == "do_editpoll" && $mybb->request_method == "post")
 
 	$plugins->run_hooks("expolls_do_editpoll_start");
 
-	$query = $db->simple_select("polls2", "*", "pid='".$mybb->get_input('pid', MyBB::INPUT_INT)."'");
+	$pid = $mybb->get_input('pid', MyBB::INPUT_INT);
+	$query = $db->simple_select("polls2", "*", "pid='$pid'");
 	$poll = $db->fetch_array($query);
 
 	if(!$poll)
